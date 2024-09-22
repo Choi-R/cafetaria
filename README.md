@@ -3,7 +3,9 @@ This is a backend app to help manage cafetaria, also serves as a part of GAMATEC
 This app use PostgreSQL as the database. 
 
 GitHub link: https://github.com/Choi-R/cafetaria
+
 The link to the Postman documentation is: https://documenter.getpostman.com/view/11327521/2sAXqtb1fM
+
 Currently live on: 
 
 # Preparation

@@ -10,7 +10,8 @@ route.put('/user', authenticate, userC.editMe)
 route.delete('/user', authenticate, userC.deleteMe)
 
 route.post('/user/manager', authenticate, ownerOnly, userC.createManager)
-// route.put('/user/:id', authenticate, ownerOnly, userC.editUser)
-// route.delete('/user/:id', authenticate, userC.deleteUser)
+route.get('/user/all', authenticate, ownerOnly, userC.getAllUser)
+route.put('/user/:userId', authenticate, ownerOnly, userC.editUser)
+route.delete('/user/:userId', authenticate, userC.deleteUser)
 
 module.exports = route

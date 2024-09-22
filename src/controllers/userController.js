@@ -1,5 +1,6 @@
 const bcrypt = require('bcrypt')
 const jwt = require('jsonwebtoken')
+const { Op } = require('sequelize');
 const { success, error, serverError } = require('../helpers/response')
 const { emptyBody } = require('../helpers/validation')
 const { sequelize, User } = require('../models')
@@ -101,7 +102,7 @@ exports.editMe = async (req, res) => {
 exports.deleteMe = async (req, res) => {
   const { id, role } = req.user
   try {
-    if (role == 'superadmin') { return error(res, 200, "Super Admin cannot be deleted") }
+    if (role == 'superadmin') { return error(res,"Super Admin cannot be deleted", 400) }
     await User.destroy({
       where: { id }
     });;
@@ -127,6 +128,56 @@ exports.createManager = async (req, res) => {
     // Registration process
     const newUser = registrationProcess(req.body, req.user)
     return success(res, newUser, 201)
+  }
+  catch (err) { return serverError(res, err) }
+}
+
+exports.getAllUser = async (req, res) => {
+  const { id } = req.user
+  const { name, sort, order = 'ASC', limit = 10, page = 1 } = req.query;
+  try {
+    const filter = name? { username: { [Op.iLike]: `%${name}%` }, fullname: { [Op.iLike]: `%${name}%` }, role: 'manager'} : { role: 'manager' }
+    const totalUsers = await User.count({ where: filter });
+    const maxPages = Math.ceil(totalUsers / limit);
+    const actualPage = page > maxPages? maxPages : page
+    const orderBy = sort ? [[sort, order.toUpperCase()]] : [['fullname', 'ASC']];
+    const user = await User.findAll({
+      where: filter,
+      order: orderBy,
+      offset: parseInt((actualPage - 1) * limit, 10)
+    });
+    return success(res, user, 200)
+  }
+  catch (err) { return serverError(res, err) }
+};
+
+// Edit other user
+exports.editUser = async (req, res) => {
+  const { userId } = req.params
+  const { username, fullname, password } = req.body
+  try {
+    const user = await User.findByPk(userId);
+    if (username && username.length > 0) { user.username = username }
+    if (fullname && fullname.length > 0) { user.fullname = fullname }
+    if (password && password.length > 0) { user.password = await bcrypt.hash(password, 10) }
+
+    await user.save()
+    return success(res, "Information updated", 200)
+  }
+  catch (err) { return serverError(res, err) }
+}
+
+// For owner to delete other account
+exports.deleteUser = async (req, res) => {
+  const { userId } = req.params
+  const { id, role } = req.user
+  try {
+    const user = await User.findByPk(userId);
+    if (!user) { return error(res, "User not found", 404) }
+    if (user.role == 'superadmin') { return error(res, 200, "Super Admin cannot be deleted", 400) }
+
+    await user.destroy();
+    return success(res, "success", 200)
   }
   catch (err) { return serverError(res, err) }
 }
