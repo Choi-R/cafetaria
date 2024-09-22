@@ -10,11 +10,13 @@ module.exports = {
     logging: false
   },
   "test": {
-    "username": "root",
-    "password": null,
-    "database": "database_test",
-    "host": "127.0.0.1",
-    "dialect": "mysql"
+    username: process.env.DB_USERNAME_TEST,
+    password: process.env.DB_PASSWORD_TEST,
+    database: process.env.DB_NAME_TEST,
+    host: process.env.DB_HOST_TEST,
+    port: process.env.DB_PORT_TEST || 5432,  // Default to port 5432 if not set
+    dialect: 'postgres',
+    logging: false
   },
   "production": {
     "username": "root",

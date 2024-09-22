@@ -54,11 +54,16 @@ app.use('/api/v1', rateLimiter, router);
 
 // Landing page
 app.get('/', (req, res) => {
-  res.send('Welcome to the Cafetaria API!');
+  res.send('Welcome to the Cafetaria API! Please refer to the documentation');
+});
+app.use((req, res, next) => {
+  res.redirect(`${req.protocol}://${req.get('host')}`);
 });
 
 const PORT = process.env.PORT || 3000;
 
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
 });
+
+module.exports = server

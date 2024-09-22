@@ -1,30 +1,38 @@
 const { success, error, serverError } = require('../helpers/response')
-const { emptyBody } = require('../helpers/validation')
-const { sequelize } = require('../models')
-
-const decimal2 = (price) => {
-  const regex = /^\d+(\.\d{1,2})?$/; // Matches a number with up to 2 decimal places
-  return regex.test(price);
-};
+const { emptyBody, decimal2, theManager } = require('../helpers/validation')
+const { sequelize, Menu, Cafe } = require('../models')
 
 // Create a new menu
 exports.createMenu = async (req, res) => {
+  const { name, price, isRecommendation, cafeId } = req.body;
+  let createBody = { name, isRecommendation, cafeId }
   try {
-    const { name, price, isRecommendation, cafeId } = req.body;
-    if (decimal2(price.toString())) {
-      const newMenu = await Menu.create({ name, price, isRecommendation, cafeId });
-      return success(res, newMenu, 201)
+    const emptyMessage = emptyBody({ name, cafeId })
+    if (emptyMessage) { return error(res, emptyMessage, 400) }
+
+    const isManagerMsg = theManager(req.user, cafe.managerId)
+    if (isManagerMsg) { return error(res, isManagerMsg, 401) }
+    
+    if (price) { 
+      if (decimal2(price.toString())) { createBody.price = price  }
+      else { return error(res, "Price must be a float with max 2 decimal", 400) }
     }
-    else {return error(res, "Price must be a float with max 2 decimal") }
+    const newMenu = await Menu.create(createBody);
+    return success(res, newMenu, 201)
+    
   } 
-  catch (err) { return serverError(res, err) }
+  catch (err) { 
+    if (err && err.parent && err.parent.constraint == "Menus_cafeId_fkey") { return error(res, "Cafe not found", 404) }
+    else { return serverError(res, err) } 
+  }
 };
 
 // Get all menus
 exports.getAllMenus = async (req, res) => {
+  const { cafeId } = req.query;
   try {
     const menus = await Menu.findAll({ include: [{ model: Cafe, as: 'cafe' }] });
-    res.status(200).json(menus);
+    return success(res, menus, 200)
   } 
   catch (err) { return serverError(res, err) }
 };
@@ -32,32 +40,43 @@ exports.getAllMenus = async (req, res) => {
 // Get a single menu by ID
 exports.getMenuById = async (req, res) => {
   try {
-    const { id } = req.params;
-    const menu = await Menu.findByPk(id);
+    const { menuId } = req.params;
+    const menu = await Menu.findByPk(menuId);
     if (!menu) {
-      return res.status(404).json({ error: 'Menu not found' });
+      return error(res, 'Menu not found', 404)
     }
-    res.status(200).json(menu);
+    return success(res, menu, 200)
   } 
   catch (err) { return serverError(res, err) }
 };
 
 // Update a menu by ID
 exports.updateMenu = async (req, res) => {
-  const { id } = req.params;
+  const { menuId } = req.params;
   const { name, price, isRecommendation, cafeId } = req.body;
   try {
-    const menu = await Menu.findByPk(id);
+    let menu = await Menu.findByPk(menuId, {
+      include: [{
+          model: Cafe,
+          as: 'cafe',
+        }],
+    });
     if (!menu) {
-      return res.status(404).json({ error: 'Menu not found' });
+      return error(res, 'Menu not found', 404)
     }
-    if (role == 'manager' && cafe.managerId != id) { return error(res, "You are not the manager of this cafe", 401) }
-    menu.name = name;
-    menu.price = price;
-    menu.isRecommendation = isRecommendation;
-    menu.cafeId = cafeId;
+    const isManagerMsg = theManager(req.user, menu.cafe.managerId)
+    if (isManagerMsg) { return error(res, isManagerMsg, 401) }
+
+    if (name) { menu.name = name }
+    if (price) { 
+      if (decimal2(price.toString())) { menu.price = price  }
+      else { return error(res, "Price must be a float with max 2 decimal", 400) }
+    }
+    if (isRecommendation) { menu.isRecommendation = isRecommendation }
+    if (cafeId) { menu.cafeId = cafeId }
     await menu.save();
-    res.status(200).json(menu);
+
+    return success(res, menu, 200)
   } 
   catch (err) { return serverError(res, err) }
 };
@@ -65,13 +84,16 @@ exports.updateMenu = async (req, res) => {
 // Delete a menu by ID
 exports.deleteMenu = async (req, res) => {
   try {
-    const { id } = req.params;
-    const menu = await Menu.findByPk(id);
+    const { menuId } = req.params;
+    const menu = await Menu.findByPk(menuId);
     if (!menu) {
-      return res.status(404).json({ error: 'Menu not found' });
+      return error(res, 'Menu not found', 404)
     }
+    const isManagerMsg = theManager(req.user, menu.cafe.managerId)
+    if (isManagerMsg) { return error(res, isManagerMsg, 401) }
+
     await menu.destroy();
-    res.status(204).json();
+    return success(res, "success", 200)
   } 
   catch (err) { return serverError(res, err) }
 };

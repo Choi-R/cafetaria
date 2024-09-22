@@ -13,8 +13,10 @@ const registrationProcess = async (reqBody, reqUser) => {
       fullname,
       password: hashed
     }
-    if (reqUser.role == 'owner') { userBody.role = 'manager' }
-    else if (reqUser.role == 'superadmin') { userBody.role = role }
+    if (reqUser && reqUser.role) {
+      if (reqUser.role == 'owner') { userBody.role = 'manager' }
+      else if (reqUser.role == 'superadmin') { userBody.role = role }
+    } 
     const newUser = await User.create(userBody)
     return newUser
   }
