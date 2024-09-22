@@ -23,3 +23,6 @@ After that, run ```npx sequelize-cli db:migrate``` (assuming sequelize-cli is al
 
 # How to Run
 Input ```npm start``` in the terminal
+
+# How to Test
+Input ```npm test``` in the terminal
